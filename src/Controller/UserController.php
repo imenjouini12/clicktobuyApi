@@ -12,6 +12,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserController extends AbstractController
 {
@@ -34,7 +35,7 @@ class UserController extends AbstractController
     /**
      * @Route("api/users/create", name="user_create", methods={"POST"})
      */
-    public function create(Request $request): Response
+    public function create(Request $request, UserPasswordHasherInterface $passwordHasher): Response
     {
            $data = json_decode($request->getContent(), true);
            $email=$data['email'];
@@ -58,9 +59,14 @@ class UserController extends AbstractController
             $user = new User();
             $user->setEmail($email);
             $user->setName($name);
-            $user->setPassword(sha1($password));     
+            
+            // Utilisez UserPasswordHasherInterface pour hacher le mot de passe
+            $hashedPassword = $passwordHasher->hashPassword($user, $password);
+            $user->setPassword($hashedPassword);
+    
             // Utilisez le service UserService pour ajouter l'utilisateur
             $this->userService->addUser($user);
+    
         
             return new JsonResponse(['message' => 'Utilisateur créé avec succès'], Response::HTTP_CREATED);
 

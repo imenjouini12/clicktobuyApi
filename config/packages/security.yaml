@@ -2,7 +2,7 @@ security:
     # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         App\Entity\User:
-            algorithm: plaintext
+            algorithm: bcrypt
             encode_as_base64: false
             iterations: 1
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
@@ -21,7 +21,7 @@ security:
             stateless: true
             provider: app_user_provider
             json_login:
-                check_path: /api/login_check
+                check_path: /api/login
                 username_path: email
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
