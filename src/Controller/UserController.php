@@ -19,14 +19,14 @@ class UserController extends AbstractController
     private $manager;
     private $user;
     private $userService;
+    private $passwordHasher;
 
-    public function __construct(EntityManagerInterface $manager, UserRepository $user,UserServiceInterface $userService)
+    public function __construct(EntityManagerInterface $manager, UserRepository $user,UserServiceInterface $userService,UserPasswordHasherInterface $passwordHasher)
     {
          $this->manager = $manager;
-
          $this->user = $user;
-
          $this->userService = $userService;
+         $this->passwordHasher = $passwordHasher ;
 
     }
     
@@ -35,7 +35,7 @@ class UserController extends AbstractController
     /**
      * @Route("api/users/create", name="user_create", methods={"POST"})
      */
-    public function create(Request $request, UserPasswordHasherInterface $passwordHasher): Response
+    public function create(Request $request): Response
     {
            $data = json_decode($request->getContent(), true);
            $email=$data['email'];
@@ -61,7 +61,7 @@ class UserController extends AbstractController
             $user->setName($name);
             
             // Utilisez UserPasswordHasherInterface pour hacher le mot de passe
-            $hashedPassword = $passwordHasher->hashPassword($user, $password);
+            $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
             $user->setPassword($hashedPassword);
     
             // Utilisez le service UserService pour ajouter l'utilisateur
@@ -100,24 +100,23 @@ class UserController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $email = isset($data['email']) ? $data['email'] : null;
         $password = isset($data['password']) ? $data['password'] : null;
-        $name = isset($data['name']) ? $data['name'] : null;
-       
-        $email_exist = $this->user->findOneByEmail($email); 
+        $name = isset($data['name']) ? $data['name'] : null; 
         if (!isset($data['name']) || !isset($data['email']) || !isset($data['password'])) {
             return new JsonResponse(['error' => 'Données JSON invalides'], Response::HTTP_BAD_REQUEST);
-        }elseif($email_exist){
-           return new JsonResponse
-           (
-               [
-                 'status'=>false,
-                 'message'=>'Cet email existe déjà, veuillez le changer'
-               ]
- 
-               );
         }else{
-         $user->setEmail($email);
-         $user->setName($name);
-         $user->setPassword(sha1($password));     
+            if ($email) {
+                $user->setEmail($email);
+            }
+            
+            if ($name) {
+                $user->setName($name);
+            }
+                 // Vérifiez si un nouveau mot de passe a été fourni
+            if ($password) {
+                // Utilisez UserPasswordHasherInterface pour hacher le mot de passe
+                $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
+                $user->setPassword($hashedPassword);
+            }
          // Utilisez le service UserService pour ajouter l'utilisateur
          $this->userService->updateUser($user);
      
@@ -139,8 +138,15 @@ class UserController extends AbstractController
         if (!$user) {
             return new JsonResponse(['error' => 'Utilisateur non trouvé'], Response::HTTP_NOT_FOUND);
         }else{
+           $plainPassword = $this->passwordHasher->hashPassword($user, $user->getPassword());
            $oneUser=$this->userService->getUserById($user->getId());
-            return $this->json($oneUser,200);
+           $userData = [
+            'id' => $user->getId(),
+            'name' => $user->getName(),
+            'email' => $user->getEmail(),
+            //'password' => $plainPassword,
+        ];
+        return $this->json($userData, 200);
         }
 
 
