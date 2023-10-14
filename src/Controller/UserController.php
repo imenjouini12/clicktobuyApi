@@ -171,4 +171,23 @@ class UserController extends AbstractController
 
     }
 
+
+        //just un test
+    /**
+    * @Route("/users/test", name="test", methods={"GET"})
+    */
+    public function test():JsonResponse
+    {
+     
+            return new JsonResponse
+            (
+                [
+                'status'=>true,
+                'message'=>'c\'est un test'
+                ]
+
+            );
+
+    }
+
 }
